@@ -21,10 +21,34 @@ export function getRecommendedItems(): MenuItem[] {
 
 export function findSimilarItems(query: string): MenuItem[] {
   const normalized = query.toLowerCase();
-  return menuItems.filter((item) => {
-    const haystack = [item.name, item.description, item.category, ...item.ingredients].join(" ").toLowerCase();
-    return haystack.includes(normalized);
-  }).slice(0, 3);
+  const available = menuItems.filter((item) => item.availability);
+  const terms = normalized.split(/\s+/).filter(Boolean);
+
+  const scored = available
+    .map((item) => {
+      const haystack = [item.name, item.description, item.category, ...item.ingredients].join(" ").toLowerCase();
+      let score = 0;
+
+      if (haystack.includes(normalized)) {
+        score += 4;
+      }
+
+      terms.forEach((term) => {
+        if (haystack.includes(term)) {
+          score += 1;
+        }
+      });
+
+      if (item.recommended) {
+        score += 1;
+      }
+
+      return { item, score };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return scored.slice(0, 3).map(({ item }) => item);
 }
 
 export function createOrderNumber(): string {

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Loader2, Sparkles, UtensilsCrossed } from "lucide-react";
 import { AIAvatar } from "@/components/AIAvatar";
-import { FoodCard } from "@/components/FoodCard";
 import { MessageBubble } from "@/components/MessageBubble";
 import { OrderCard } from "@/components/OrderCard";
 import { PaymentCard } from "@/components/PaymentCard";
@@ -12,7 +11,7 @@ import { Receipt } from "@/components/Receipt";
 import { StatusTimeline } from "@/components/StatusTimeline";
 import { TypingAnimation } from "@/components/TypingAnimation";
 import { VoiceButton } from "@/components/VoiceButton";
-import { restaurantInfo, menuItems, type MenuItem } from "@/data/data";
+import { restaurantInfo, type MenuItem } from "@/data/data";
 import { useCart } from "@/hooks/useCart";
 import { useChat } from "@/hooks/useChat";
 import { useAudio } from "@/hooks/useAudio";
@@ -22,7 +21,15 @@ import { speakText, stopSpeech } from "@/lib/speech";
 
 export default function Home() {
   const { items, addItem, removeItem, clear, total } = useCart();
-  const { messages, loading, speaking, ask, stop, pushMessage } = useChat();
+  const { messages, loading, speaking, ask, stop, pushMessage } = useChat(
+    async (item) => {
+      addItem(item);
+      setStep("browse");
+    },
+    () => {
+      setStep("checkout");
+    },
+  );
   const { listening, transcript, error, start, stop: stopListening, setTranscript } = useAudio();
   const [input, setInput] = useState("");
   const [step, setStep] = useState<"browse" | "checkout" | "payment" | "status" | "receipt">("browse");
@@ -38,9 +45,19 @@ export default function Home() {
   }, [pushMessage]);
 
   useEffect(() => {
-    if (transcript) {
-      setInput(transcript);
+    if (!transcript) {
+      return;
     }
+
+    setInput(transcript);
+    const timer = window.setTimeout(() => {
+      const trimmed = transcript.trim();
+      if (trimmed) {
+        void handleSend(trimmed);
+      }
+    }, 800);
+
+    return () => window.clearTimeout(timer);
   }, [transcript]);
 
   useEffect(() => {
@@ -52,10 +69,11 @@ export default function Home() {
     }
   }, [step]);
 
-  const handleSend = async () => {
-    const trimmed = input.trim();
+  const handleSend = async (value?: string) => {
+    const trimmed = (value ?? input).trim();
     if (!trimmed) return;
     setInput("");
+    setTranscript("");
     await ask(trimmed);
   };
 
@@ -117,7 +135,7 @@ export default function Home() {
                 <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">Talk to your personal dining concierge, discover chef favorites, and place orders with conversational clarity.</p>
               </div>
               <div className="flex items-center gap-3">
-                <VoiceButton listening={listening} onToggle={() => (listening ? stopListening() : start())} />
+                <VoiceButton listening={listening} onToggle={() => (listening ? stopListening() : void start())} />
                 <button onClick={() => { stop(); stopListening(); }} className="rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700">Stop audio</button>
               </div>
             </div>
@@ -143,11 +161,11 @@ export default function Home() {
                 placeholder="Ask for a meal, an order, or recommendations"
                 className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm outline-none"
               />
-              <button onClick={handleSend} className="flex items-center justify-center gap-2 rounded-full bg-[#1E3A8A] px-5 py-3 text-sm font-semibold text-white">
+              <button onClick={() => void handleSend()} className="flex items-center justify-center gap-2 rounded-full bg-[#1E3A8A] px-5 py-3 text-sm font-semibold text-white">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Send
               </button>
             </div>
-            {error ? <p className="mt-3 text-sm text-[#7B1E3A]">{error}</p> : null}
+            {error ? <p className="mt-3 rounded-2xl border border-[#7B1E3A]/20 bg-[#7B1E3A]/10 px-4 py-3 text-sm text-[#7B1E3A]">{error}</p> : null}
             {transcript ? <p className="mt-3 text-sm text-slate-500">Captured: {transcript}</p> : null}
           </motion.div>
 
@@ -172,26 +190,13 @@ export default function Home() {
           </motion.aside>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="rounded-[36px] border border-white/70 bg-white/70 p-6 shadow-[0_30px_120px_-40px_rgba(0,0,0,0.25)] backdrop-blur">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#7B1E3A]">Popular meals</p>
-                <h3 className="text-2xl font-semibold text-slate-950">Chef’s recommendations</h3>
-              </div>
-              <div className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-500">Menu guided by Gemma 4</div>
-            </div>
-            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {menuItems.slice(0, 3).map((item) => <FoodCard key={item.id} item={item} onOrder={handleOrder} />)}
-            </div>
-          </div>
-
+        <div className="grid gap-6 xl:grid-cols-[1fr]">
           <div className="rounded-[36px] border border-white/70 bg-white/70 p-6 shadow-[0_30px_120px_-40px_rgba(0,0,0,0.2)] backdrop-blur">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#7B1E3A]">Conversation</p>
             <h3 className="mt-2 text-2xl font-semibold text-slate-950">Live AI responses</h3>
             <div className="mt-6 space-y-4 rounded-[28px] bg-slate-50/80 p-4">
               <AnimatePresence mode="popLayout">
-                {messages.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">The assistant will greet you automatically on load.</div> : messages.map((message, index) => <MessageBubble key={`${message.role}-${index}`} role={message.role === "assistant" ? "assistant" : "user"} content={message.content} />)}
+                {messages.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 p-4 text-sm text-slate-500">The assistant will greet you automatically on load.</div> : messages.map((message, index) => <MessageBubble key={`${message.role}-${index}`} role={message.role === "assistant" ? "assistant" : "user"} content={message.content} suggestions={message.payload?.suggestions} />)}
               </AnimatePresence>
               {loading ? <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3"><TypingAnimation /><span className="text-sm text-slate-600">Gemma 4 is thinking</span></div> : null}
             </div>

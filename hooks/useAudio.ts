@@ -1,4 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+function getRecognitionCtor() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function extractTranscript(event: SpeechRecognitionEvent): string {
+  const results = event.results;
+  if (!results || results.length === 0) {
+    return "";
+  }
+
+  const latestResult = results[results.length - 1];
+  if (!latestResult) {
+    return "";
+  }
+
+  const parts: string[] = [];
+  for (let index = 0; index < latestResult.length; index += 1) {
+    const alternative = latestResult[index] as unknown as { transcript?: string } | undefined;
+    if (alternative?.transcript) {
+      parts.push(alternative.transcript);
+    }
+  }
+
+  return parts.join(" ").trim();
+}
 
 export function useAudio() {
   const [listening, setListening] = useState(false);
@@ -6,54 +36,69 @@ export function useAudio() {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  const SpeechRecognitionCtor = useMemo(() => {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+    };
   }, []);
 
-  useEffect(() => {
-    if (!SpeechRecognitionCtor) {
-      setError("Speech recognition is not supported in this browser.");
+  const start = async () => {
+    const RecognitionCtor = getRecognitionCtor();
+
+    if (!RecognitionCtor) {
+      setError("Speech recognition is not supported in this browser. Please try Chrome or Edge.");
       return;
     }
 
-    const recognition = new SpeechRecognitionCtor();
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+
+    if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch {
+        setError("Microphone access was denied. Please allow microphone access and try again.");
+        return;
+      }
+    }
+
+    const recognition = new RecognitionCtor();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const result = Array.from(event.results)
-        .map((entry) => {
-          const transcript = (entry as unknown as { [index: number]: { transcript?: string } })[0]?.transcript ?? "";
-          return transcript;
-        })
-        .join(" ");
-      setTranscript(result);
+    recognition.onstart = () => {
+      setListening(true);
+      setError(null);
+      setTranscript("");
     };
 
-    recognition.onerror = () => setError("Unable to process audio input.");
-    recognition.onend = () => setListening(false);
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const nextTranscript = extractTranscript(event);
+      if (nextTranscript) {
+        setTranscript(nextTranscript);
+      }
+    };
+
+    recognition.onerror = (event: Event) => {
+      setListening(false);
+      const detail = event instanceof ErrorEvent ? event.message : event.type;
+      setError(`Audio capture failed: ${detail}. Try using the text input instead.`);
+    };
+
+    recognition.onend = () => {
+      setListening(false);
+    };
 
     recognitionRef.current = recognition;
 
-    return () => {
-      recognition.stop();
-    };
-  }, [SpeechRecognitionCtor]);
-
-  const start = () => {
-    if (!recognitionRef.current) {
-      setError("Speech recognition is not supported in this browser.");
-      return;
+    try {
+      recognition.start();
+    } catch (startError) {
+      setListening(false);
+      setError(`Could not start microphone: ${startError instanceof Error ? startError.message : "unknown error"}`);
     }
-
-    setListening(true);
-    setError(null);
-    recognitionRef.current.start();
   };
 
   const stop = () => {
