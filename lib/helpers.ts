@@ -23,6 +23,8 @@ export function findSimilarItems(query: string): MenuItem[] {
   const normalized = query.toLowerCase();
   const available = menuItems.filter((item) => item.availability);
   const terms = normalized.split(/\s+/).filter(Boolean);
+  const stopWords = new Set(["i", "want", "a", "an", "the", "please", "can", "you", "me", "give", "get", "for", "to", "of", "and", "or", "with"]);
+  const filteredTerms = terms.filter((term) => term.length > 2 && !stopWords.has(term));
 
   const scored = available
     .map((item) => {
@@ -33,11 +35,15 @@ export function findSimilarItems(query: string): MenuItem[] {
         score += 4;
       }
 
-      terms.forEach((term) => {
+      filteredTerms.forEach((term) => {
         if (haystack.includes(term)) {
           score += 1;
         }
       });
+
+      if (item.category.toLowerCase() === normalized || haystack.includes(normalized.split(" ")[0] ?? "")) {
+        score += 1;
+      }
 
       if (item.recommended) {
         score += 1;

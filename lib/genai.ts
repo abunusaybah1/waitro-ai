@@ -27,6 +27,8 @@ function buildLocalResponse(input: string) {
   const matchedItem = availableItems.find((item) => text.includes(item.name.toLowerCase()));
   const requestedItem = menuItems.find((item) => text.includes(item.name.toLowerCase()));
   const suggestions = findSimilarItems(text).filter((item) => item.availability);
+  const unavailableKeywords = ["not available", "unavailable", "out of stock", "sold out", "doesn't exist", "does not exist", "can't find", "cannot find"];
+  const mentionsUnavailable = unavailableKeywords.some((keyword) => text.includes(keyword));
 
   if (matchedItem) {
     return {
@@ -40,6 +42,14 @@ function buildLocalResponse(input: string) {
     return {
       type: "food_unavailable",
       message: `${requestedItem.name} is currently unavailable. Here are some available meals you can try instead:`,
+      suggestions: suggestions.length > 0 ? suggestions : availableItems.slice(0, 3),
+    };
+  }
+
+  if (mentionsUnavailable) {
+    return {
+      type: "food_unavailable",
+      message: "I can help with that. Here are some meals that are available right now:",
       suggestions: suggestions.length > 0 ? suggestions : availableItems.slice(0, 3),
     };
   }

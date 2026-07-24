@@ -1,6 +1,6 @@
-import { Printer, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { formatCurrency } from "@/lib/helpers";
-import { downloadReceipt, printReceipt, type ReceiptData } from "@/lib/receipt";
+import { downloadReceipt, type ReceiptData } from "@/lib/receipt";
 
 interface ReceiptProps {
   receipt: ReceiptData;
@@ -40,12 +40,9 @@ export function Receipt({ receipt }: ReceiptProps) {
         <span>Total</span>
         <span>{formatCurrency(receipt.total)}</span>
       </div>
-      <div className="mt-6 flex gap-3">
-        <button onClick={() => printReceipt(receipt)} className="flex flex-1 items-center justify-center gap-2 rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
-          <Printer className="h-4 w-4" /> Print
-        </button>
-        <button onClick={() => downloadReceipt(receipt)} className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#1E3A8A] to-[#7B1E3A] px-4 py-3 text-sm font-semibold text-white">
-          <Download className="h-4 w-4" /> Download
+      <div className="mt-6">
+        <button onClick={() => downloadReceipt(receipt)} className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#1E3A8A] to-[#7B1E3A] px-4 py-3 text-sm font-semibold text-white">
+          <Download className="h-4 w-4" /> Download receipt
         </button>
       </div>
     </div>

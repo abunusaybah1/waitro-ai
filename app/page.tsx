@@ -155,10 +155,10 @@ export default function Home() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#1E3A8A]/10 px-3 py-1 text-sm font-semibold text-[#1E3A8A]">
-                  <Sparkles className="h-4 w-4" /> Premium voice-first ordering
+                  <Sparkles className="h-4 w-4" /> Chat with your AI dining assistant
                 </div>
                 <h2 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl">Order beautifully, effortlessly, and instantly.</h2>
-                <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">Talk to your personal dining concierge, discover chef favorites, and place orders with conversational clarity.</p>
+                <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">Type or speak naturally, and let the assistant guide your order from menu discovery to checkout.</p>
               </div>
               <div className="flex items-center gap-3">
                 <VoiceButton listening={listening} onToggle={() => (listening ? stopListening() : void start())} />
@@ -168,9 +168,9 @@ export default function Home() {
 
             <div className="mt-8 grid gap-4 rounded-[28px] border border-white/60 bg-gradient-to-br from-[#1E3A8A] via-[#1E3A8A] to-[#7B1E3A] p-4 text-white shadow-2xl md:grid-cols-[1fr_auto] md:p-6">
               <div>
-                <p className="text-sm uppercase tracking-[0.3em] text-white/70">Live assistant</p>
-                <p className="mt-2 text-2xl font-semibold">{speaking ? "Listening and speaking" : "Ready to assist"}</p>
-                <p className="mt-3 text-sm leading-7 text-white/80">Tap the mic, speak naturally, or type your request below.</p>
+                <p className="text-sm uppercase tracking-[0.3em] text-white/70">AI assistant</p>
+                <p className="mt-2 text-2xl font-semibold">{speaking ? "Responding now" : "Ready to assist"}</p>
+                <p className="mt-3 text-sm leading-7 text-white/80">Type a request or use the mic and the assistant will handle the rest.</p>
               </div>
               <div className="flex items-center justify-center rounded-3xl border border-white/20 bg-white/10 px-6 py-8">
                 <div className="flex flex-col items-center gap-3 text-center">
