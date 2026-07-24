@@ -3,6 +3,7 @@ import { getAIResponse, type ChatMessage } from "@/lib/genai";
 import { speakText, stopSpeech } from "@/lib/speech";
 import { type MenuItem } from "@/data/data";
 import { useCart } from "@/hooks/useCart";
+import { parseQuantityFromText } from "@/lib/helpers";
 
 export interface ChatPayload {
   type?: string;
@@ -40,9 +41,20 @@ export function useChat(onMealFound?: (item: MenuItem) => void, onCheckout?: () 
     const payload = response as ChatPayload | undefined;
     const assistantText = payload?.message ?? "I’m here to help you order.";
 
+    const normalizedInput = input.toLowerCase();
+    const shouldConfirm = normalizedInput.includes("confirm") || normalizedInput.includes("yes") || normalizedInput.includes("okay") || normalizedInput.includes("place order") || normalizedInput.includes("checkout");
+    const shouldEditQuantity = normalizedInput.includes("change quantity") || normalizedInput.includes("edit quantity") || normalizedInput.includes("make it") || normalizedInput.includes("update quantity") || normalizedInput.includes("change to") || normalizedInput.includes("set to");
+
     if (payload?.type === "food" && payload.food) {
-      addItem(payload.food);
+      const quantity = parseQuantityFromText(input);
+      addItem(payload.food, quantity);
       onMealFound?.(payload.food);
+      if (!shouldConfirm && !shouldEditQuantity) {
+        onCheckout?.();
+      }
+    }
+
+    if (shouldConfirm) {
       onCheckout?.();
     }
 

@@ -68,26 +68,33 @@ export function useAudio() {
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    recognition.onstart = () => {
+    const recognitionWithEvents = recognition as typeof recognition & {
+      onstart?: () => void;
+      onresult?: (event: SpeechRecognitionEvent) => void;
+      onerror?: (event: Event) => void;
+      onend?: () => void;
+    };
+
+    recognitionWithEvents.onstart = () => {
       setListening(true);
       setError(null);
       setTranscript("");
     };
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
+    recognitionWithEvents.onresult = (event: SpeechRecognitionEvent) => {
       const nextTranscript = extractTranscript(event);
       if (nextTranscript) {
         setTranscript(nextTranscript);
       }
     };
 
-    recognition.onerror = (event: Event) => {
+    recognitionWithEvents.onerror = (event: Event) => {
       setListening(false);
       const detail = event instanceof ErrorEvent ? event.message : event.type;
       setError(`Audio capture failed: ${detail}. Try using the text input instead.`);
     };
 
-    recognition.onend = () => {
+    recognitionWithEvents.onend = () => {
       setListening(false);
     };
 

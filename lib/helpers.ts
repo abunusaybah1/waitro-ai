@@ -51,8 +51,39 @@ export function findSimilarItems(query: string): MenuItem[] {
   return scored.slice(0, 3).map(({ item }) => item);
 }
 
+export function parseQuantityFromText(input: string): number {
+  const normalized = input.toLowerCase();
+  const quantityMatch = normalized.match(/(\d+)\s*(?:plates?|servings?|orders?|items?|bowls?)/);
+  if (quantityMatch?.[1]) {
+    return Number(quantityMatch[1]);
+  }
+
+  const wordMatch = normalized.match(/\b(one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:plates?|servings?|orders?|items?|bowls?)/);
+  if (wordMatch?.[1]) {
+    const words = {
+      one: 1,
+      two: 2,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+    } as const;
+    return words[wordMatch[1] as keyof typeof words] ?? 1;
+  }
+
+  return 1;
+}
+
 export function createOrderNumber(): string {
   return `WT-${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+export function createReceiptFilename(orderNumber: string): string {
+  return `waitro-receipt-${orderNumber.toLowerCase()}.txt`;
 }
 
 export function createEstimatedTime(minutes: number): string {

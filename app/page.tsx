@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { type CartItem } from "@/hooks/useCart";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Loader2, Sparkles, UtensilsCrossed } from "lucide-react";
 import { AIAvatar } from "@/components/AIAvatar";
@@ -36,6 +37,7 @@ export default function Home() {
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [statusIndex, setStatusIndex] = useState(0);
+  const [pendingQuantityItem, setPendingQuantityItem] = useState<CartItem | null>(null);
 
   const greeting = "Hello 👋 Welcome to Waitro AI. I'm your AI restaurant assistant. How may I serve you today?";
 
@@ -78,9 +80,33 @@ export default function Home() {
   };
 
   const handleOrder = async (item: MenuItem) => {
-    addItem(item);
+    addItem(item, 1);
+    setPendingQuantityItem({ ...item, quantity: 1 });
     setStep("browse");
     await ask(`I want to order ${item.name}`);
+  };
+
+  const handleQuantityEdit = (nextQuantity: number) => {
+    if (!pendingQuantityItem) {
+      return;
+    }
+
+    const itemToUpdate = items.find((item) => item.id === pendingQuantityItem.id);
+    if (!itemToUpdate) {
+      return;
+    }
+
+    const quantityDelta = nextQuantity - itemToUpdate.quantity;
+    if (quantityDelta > 0) {
+      addItem(itemToUpdate, quantityDelta);
+    } else if (quantityDelta < 0) {
+      const removeCount = Math.abs(quantityDelta);
+      for (let index = 0; index < removeCount; index += 1) {
+        removeItem(itemToUpdate.id);
+      }
+    }
+
+    setPendingQuantityItem({ ...itemToUpdate, quantity: nextQuantity });
   };
 
   const handlePay = () => {
@@ -180,6 +206,18 @@ export default function Home() {
             <div className="mt-6 space-y-3">
               {items.length === 0 ? <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">Your cart is empty. Ask the assistant for a recommendation.</div> : items.map((item) => <OrderCard key={item.id} item={item} onRemove={removeItem} />)}
             </div>
+            {pendingQuantityItem ? (
+              <div className="mt-4 rounded-[20px] border border-[#1E3A8A]/20 bg-[#1E3A8A]/5 p-4 text-sm text-slate-700">
+                <p className="font-semibold text-slate-900">Confirm quantity</p>
+                <p className="mt-1">{pendingQuantityItem.name} is currently set to {pendingQuantityItem.quantity}.</p>
+                <div className="mt-3 flex items-center gap-2">
+                  <button onClick={() => handleQuantityEdit(Math.max(1, pendingQuantityItem.quantity - 1))} className="rounded-full border border-slate-300 px-3 py-2 text-sm">-</button>
+                  <span className="min-w-10 text-center font-semibold">{pendingQuantityItem.quantity}</span>
+                  <button onClick={() => handleQuantityEdit(pendingQuantityItem.quantity + 1)} className="rounded-full border border-slate-300 px-3 py-2 text-sm">+</button>
+                  <button onClick={() => { setPendingQuantityItem(null); setStep("checkout"); }} className="ml-2 rounded-full bg-[#1E3A8A] px-3 py-2 text-sm font-semibold text-white">Confirm</button>
+                </div>
+              </div>
+            ) : null}
             <div className="mt-6 rounded-[24px] bg-slate-950/95 p-5 text-white">
               <div className="flex items-center justify-between text-sm text-white/70">
                 <span>Subtotal</span>
